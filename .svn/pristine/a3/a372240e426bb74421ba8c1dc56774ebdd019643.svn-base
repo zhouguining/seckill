@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zepal.seckill.dao.SuccessSeckillDao">
+	<insert id="insertSuccessSeckill">
+		<!-- ignore防止主键冲突报错,如果主键冲突,返回0 -->
+		insert ignore into success_seckill(seckill_id, user_phone)
+		values(#{seckillId}, #{userPhone});
+	</insert>
+	
+	<resultMap type="com.zepal.seckill.po.SuccessSeckillPO" id="successSeckillMap">
+		<id column="seckill_id" property="seckillId"/>
+		<result column="user_phone" property="userPhone"/>
+		<result column="state" property="state"/>
+		<result column="create_time" property="createTime"/>
+		<association column="seckill_id" property="seckillPO"
+			select="com.zepal.seckill.dao.SeckillDao.queryById"
+			javaType="com.zepal.seckill.po.SeckillPO"
+			fetchType="lazy"/>
+	</resultMap>
+	
+	<select id="queryByIdWithSeckill" resultMap="successSeckillMap">
+		select * from success_seckill where seckill_id = #{seckillId} and user_phone = #{userPhone};
+	</select>
+	
+	<!-- 存储过程都是通过select标签调用 -->
+	<select id="killByProcedure" statementType="CALLABLE" parameterMap="paramMap">
+		call execute_seckill(?,?,?,?);
+	</select>
+	
+	<parameterMap type="map" id="paramMap">
+		<parameter property="seckillId" mode="IN" jdbcType="INTEGER"/>
+		<parameter property="phone" mode="IN" jdbcType="VARCHAR"/>
+		<parameter property="killTime" mode="IN" jdbcType="TIMESTAMP"/>
+		<parameter property="result" mode="OUT" jdbcType="INTEGER"/>
+	</parameterMap>
+</mapper>

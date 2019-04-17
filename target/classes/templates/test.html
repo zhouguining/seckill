@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<script type="text/javascript">
+	var random = Math.floor(Math.random() * (100-1+1) + 1);
+	
+	while(true){
+		var num = parseInt(prompt("请输入一个数 ："));
+		if(isNaN(num) || num>100 || num<1){
+			console.log("输入有误");
+		}else if(num > random){
+			alert("猜大了");
+		}else if(num < random){
+			alert("猜小了");
+		}else{
+			alert("正确");
+			break;
+		}
+	}
+</script>
+<body>
+	<h1>hellow world</h1>
+</body>
+</html>

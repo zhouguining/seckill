@@ -1,0 +1,50 @@
+--dao层
+1、xml转义
+<符号 <![CDATA[ <= ]]> &lt; 转义,前一种直观一点;
+2、在sql中,对非数字类型排序的时候,排序目标加上一个常数,否则,会导致结果不一致
+e.g. 两个或多个字段都是2019-04-01,排序结果会不一致,(date+0)可以解决;
+
+--web层
+restful
+1、兴起于Rails
+2、一种优雅的URI表达方式
+3、资源的状态和转移状态
+示例
+GET /seckill/list 正例--获取秒杀列表
+POST /seckill/execute/{sckillId} 反例
+POST /seckill/{seckillId}/execution 正例--执行具体资源的秒杀
+DELETE /seckill/{seckillId}/delete 正例--删除具体资源
+result规范
+GET ->查询操作
+POST ->添加、修改操作
+PUT ->修改操作(区别POST:PUT幂等操作,POST非幂等操作,一般情况下,没有太严格的区分)
+DELETE ->删除操作
+URL设计
+/模块/资源/{标识}/集合1/... e.g. GET /user/{userId}/frends -> 好友列表
+GET /user/{userId}/followers -> 关注者列表
+本系统API设计
+GET /seckill/list -> 秒杀列表
+GET /seckill/{id}/detail -> 详情页
+GET /seckill/time/now -> 系统时间
+POST /seckill/{id}/exposer -> 暴露秒杀
+POST /seckill/{id}/{md5}/execution -> 执行秒杀
+
+
+----声明式事务
+1、开发团队达成一致约定,明确标注事务方法的编程风格
+2、保证事务方法的执行时间尽可能的短,不要穿插其它网络操作RPC/HTTP,剥离到事务方法外部
+3、不是所有的方法都需要事务,如只有一条修改操作,只读操作不需要事务控制
+
+--日志
+logback官网
+
+--懒加载序列化问题
+在需要序列化的对象加上@JsonIgnoreProperties(value = {"handler"})
+或者配置解决-->com.zepal.seckill.config.JsonConfig
+
+--序列化(本项目redis使用)
+protostuff-->最快-->github上有专门的序列化效率比较
+protostuff序列化对象必须是要有getter/setter的pojo
+
+--工具类 commons-collections
+

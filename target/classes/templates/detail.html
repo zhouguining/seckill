@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>秒杀详情页</title>
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- HTML5 shim 和 Respond.js 是为了让 IE8 支持 HTML5 元素和媒体查询（media queries）功能 -->
+    <!-- 警告：通过 file:// 协议（就是直接将 html 页面拖拽到浏览器中）访问页面时 Respond.js 不起作用 -->
+    <!--[if lt IE 9]>
+      <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+    <![endif]-->
+     <!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@1.12.4/dist/jquery.min.js"></script>
+    <!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script>
+  	<!-- jquery cookie插件 -->
+  	<script src="https://cdn.bootcss.com/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+  	<!-- jquery countdown 倒计时插件 -->
+  	<!-- 这里不能写单标签,否则再下的js不加载 -->
+  	<script src="https://cdn.bootcss.com/jquery.countdown/2.2.0/jquery.countdown.min.js"></script>
+  </head>
+  <script type="text/javascript">
+  //js模块化
+  //seckill.detail.init(param)
+  var seckill={
+	//封装秒杀相关ajax的url
+	URL:{
+		now:function(){
+			return '/seckill/time/now';
+		},
+		exposer:function(seckillId){
+			return '/seckill/'+seckillId+'/exposer';
+		},
+		execution:function(seckillId, md5){
+			return '/seckill/'+seckillId+'/'+md5+'/execution';
+		}
+	},
+	handleSeckillkill:function(seckillId, node){//处理秒杀逻辑
+		//获取秒杀地址，控制显示逻辑,执行秒杀
+		node.hide().html('<button type="button" class="btn btn-primary" id="killBtn">开始秒杀</button>');
+		$.ajax({
+			url : seckill.URL.exposer(seckillId),
+	   		type : "POST", 
+	   		datatype : "json",
+	  		async : true,
+	     	success : function(result) {
+	     		if(result && result.code == 200){//执行交互逻辑
+	     			var exposer = result.data.exposer;
+					if(exposer.exposed){//开启秒杀
+						var md5 = exposer.md5;
+						var killUrl = seckill.URL.execution(seckillId, md5);
+						//绑定一次点击事件
+						$('#killBtn').one('click',function(){
+							//绑定执行秒杀请求操作<执行秒杀
+							$(this).addClass('disabled');
+							//发送秒杀请求
+							$.ajax({
+								url : killUrl,
+						   		type : "POST", 
+						   		datatype : "json",
+						  		async : true,
+						     	success : function(result) {
+						     		if(result && result.status){
+						     			var killResult = result.data.seckillExecution;
+						     			var state = killResult.state;
+						     			var stateInfo = killResult.stateInfo;
+						     			//显示秒杀结果
+						     			node.html('<span class="label label-success">'+stateInfo+'</span>');
+						     		}else{
+						     			var killResult = result.data;
+						     			var stateInfo = killResult.errorInfo;
+						     			//显示秒杀结果
+						     			node.html('<span class="label label-success">'+stateInfo+'</span>');
+						     		}
+						     	},
+						   		error : function(){
+							  		 alert('执行秒杀失败');
+						   		}
+							}); 
+						});
+						node.show();//显示秒杀结果
+					}else{//未开启秒杀
+						var now = exposer.now;
+						var start = exposer.start;
+						var end = exposer.end;
+						//重新计算计时逻辑-->我们认为客户端存在时间偏差
+						seckill.countdown(seckillId, now, start, end);
+					}     			
+	     		}else{
+	     			alert("获取秒杀地址失败-->" + result.data.errorInfo);
+	     		}
+	     	},
+	   		error : function(){
+		  		 alert('获取秒杀地址失败');
+	   		}
+		}); 
+	},
+	//验证手机号
+	validatePhone:function(phone){
+		//phone是否存在直接if(phone)
+		if(phone && phone.length==11 && !isNaN(phone)){
+			return true;
+		}else{
+			return false;
+		}
+	},
+	countdown:function(seckillId, nowTime, startTime, endTime){
+		var seckillBox = $("#seckill-box");
+		//时间判断
+		if(nowTime > endTime){//秒杀结束
+			seckillBox.html('秒杀结束');
+		}else if(nowTime < startTime){//秒杀未开始，倒计时
+			var killTime = new Date(startTime + 1000);//加上1s,防止时间偏移 
+			seckillBox.countdown(killTime,function(event){
+				var format = event.strftime("秒杀倒计时 ：%D天 %H时 %M分 %S秒");//时间格式
+				seckillBox.html(format);
+			}).on('finish.countdown', function(){//时间完成后回调事件
+				seckill.handleSeckillkill(seckillId, seckillBox);
+			});
+		}else{
+			seckill.handleSeckillkill(seckillId, seckillBox);
+		}
+	},
+	//详情页秒杀逻辑
+	detail:{
+		//详情页初始化
+		init:function(params){
+			//手机验证和登录，计时交互killPhone
+			//规划我们的交互逻辑
+			//在cookie中查找手机号
+			var killPhone = $.cookie('killPhone');
+			//验证手机号
+			if(!seckill.validatePhone(killPhone)){
+				//显示模态框输入手机号
+				//绑定phone，控制输出  -->弹出模态框,禁止位置关闭和esc关闭
+				var killPhoneModal = $("#myModal");
+				killPhoneModal.modal({
+					show:true,//显示模态框
+					backdrop:'static',//禁止位置关闭
+					keyboard:false//关闭键盘事件
+				});
+				$("#killPhoneBtn").click(function(){
+					var inputPhone = $("#killPhoneKey").val();
+					if(seckill.validatePhone(inputPhone)){//如果输入的手机号验证通过
+						//电话写入cookie,默认路径path:"/"
+						$.cookie("killPhone", inputPhone, {expires:7});
+						//刷新页面
+						window.location.reload();
+					}else{//如果验证未通过
+						$("#killPhoneMessage").hide().html("手机号错误").show(300);
+					}
+				});
+			}
+			//已经登录
+			var seckillId = params.seckillId;
+			var startTime = params.startTime;
+			var endTime = params.endTime;
+			//计时交互
+			$.ajax({
+				url : seckill.URL.now(),
+		   		type : "GET", 
+		   		datatype : "json",
+		  		async : true,
+		     	success : function(result) {
+		     		if(result.code == 200){
+		     			var nowTime = result.data.now;
+		     			//时间判断,计时交互
+		     			seckill.countdown(seckillId, nowTime, startTime, endTime);
+		     			
+		     		}else{
+		     			alert("获取系统时间失败-->" + JSON.stringify(result));
+		     		}
+		     	},
+		   		error : function(){
+			  		 alert('获取系统时间失败');
+		   		}
+			}); 
+		}
+	}
+  };
+  /* ---------------------------------------------------- */
+  function getQueryString(name) {   //从url中获取参数
+      var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");   
+      var r = window.location.search.substr(1).match(reg);   
+      if (r != null){
+    	  return decodeURI(r[2]);
+      }  
+      return null;   
+	} 
+  /* -------------------------------------------------- */
+  	$(document).ready(function () { //页面初始化加载
+		var seckillId_url = getQueryString('seckillId');
+  		var name_url = getQueryString('name');
+  		var startTime_url = getQueryString('startTime');
+  		var endTime_url = getQueryString('endTime');
+	  	
+  		$("#detail_title").empty().append(name_url);//修改标题
+  		
+  		seckill.detail.init({
+	  		seckillId : seckillId_url,
+	  		startTime : (new Date(startTime_url)).getTime(),
+	  		endTime : (new Date(endTime_url)).getTime()
+	  	});
+	});
+  /* ------------------------------------------------ */
+  //TODO 测试模态框  可删
+  function modal_test(){
+	  $('#myModal').modal({
+		  keyboard: false
+	  });
+  }
+  
+  </script>
+  <body>
+    <div class="container-fluid">
+    	<div class="row">
+    		<!-- 标题 -->
+    		<div class="col-md-12 text-center">
+    			<h1 id="detail_title">秒杀详情</h1>
+    		</div>
+    	</div>
+    	<div class="row">
+    		<div class="col-md-12 text-center">
+    			<h2 class="text-danger">
+    				<!-- 显示time图标 -->
+    				<span class="glyphicon glyphicon-time" aria-hidden="true"></span>
+   					<!-- 展示倒计时 -->
+   					<span class="glyphicon" id="seckill-box"></span>
+    			</h2>
+    		</div>
+    	</div>
+    </div>
+   
+   <!-- <button type="button" onclick="modal_test()">测试modal</button> -->
+   <!-- 验证手机号模态框 -->
+   <div id="myModal" class="modal fade" tabindex="-1" role="dialog">
+	  <div class="modal-dialog" role="document">
+	    <div class="modal-content text-center">
+	      <div class="modal-header">
+	        <!-- <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button> -->
+	        <h4 class="modal-title"><span class="glyphicon glyphicon-paperclip" aria-hidden="true"></span>&nbsp;&nbsp;秒杀电话</h4>
+	      </div>
+	      <div class="modal-body">
+	        <input type="text" class="form-control" name="killPhone" id="killPhoneKey" placeholder="填写手机号^_^"/>
+	      </div>
+	      <div class="modal-footer">
+	        <button id="killPhoneBtn" type="button" class="btn btn-success"><span class="glyphicon glyphicon-hand-right" aria-hidden="true"></span>&nbsp;Submit</button>
+	      </div>
+	      <div id="killPhoneMessage" class="alert alert-danger" role="alert" style="display: none;">
+	      	
+	      </div>
+	    </div><!-- /.modal-content -->
+	  </div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
+  </body>
+</html>

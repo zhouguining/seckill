@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zepal.seckill.dao.SeckillDao">
+
+	<update id="reduceNumber">
+		UPDATE seckill SET number = number-1
+		WHERE seckill_id = #{seckillId}
+		<!-- <![CDATA[ <= ]]> &lt; 转义,前一种直观一点 -->
+		AND start_time <![CDATA[ <= ]]> #{killTime}
+		AND end_time >= #{killTime}
+		AND number > 0;
+	</update>
+	
+	<!-- 这种形式方便排错 -->
+	<resultMap type="com.zepal.seckill.po.SeckillPO" id="seckillMap">
+		<id column="seckill_id" property="seckillId"/>
+		<result column="name" property="name"/>
+		<result column="number" property="number"/>
+		<result column="start_time" property="startTime"/>
+		<result column="end_time" property="endTime"/>
+		<result column="create_time" property="createTime"/>
+	</resultMap>
+	
+	<select id="queryById" parameterType="long" resultMap="seckillMap">
+		SELECT seckill_id, name, number, start_time, end_time, create_time 
+		FROM seckill 
+		WHERE seckill_id = #{seckillId};
+	</select>
+	
+	<select id="queryAll" resultMap="seckillMap">
+		SELECT seckill_id, name, number, start_time, end_time, create_time 
+		FROM seckill 
+		<!-- 视频中没加0,会影响排序 -->
+		order by (create_time+0) desc
+		limit #{offset}, #{limit};
+	</select>
+	
+</mapper> 
